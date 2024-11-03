@@ -177,6 +177,29 @@ func scanAndAppendToken(source string, tokens *[]Token, currentPos int, line int
 				currentPos++
 			}
 			// Don't append a token for comments.
+		} else if match(source, &currentPos, '*') {
+			// Multi-line comment: skip until closing */
+			depth := 1
+			for depth > 0 && currentPos < len(source) {
+				if peek(source, currentPos) == '/' && peekNext(source, currentPos) == '*' {
+					// Nested comment start
+					currentPos += 2
+					depth++
+				} else if peek(source, currentPos) == '*' && peekNext(source, currentPos) == '/' {
+					// Comment end
+					currentPos += 2
+					depth--
+				} else {
+					if source[currentPos] == '\n' {
+						line++
+					}
+					currentPos++
+				}
+			}
+			if depth > 0 {
+				reportError(line, "Unterminated multi-line comment.")
+				panic("Unterminated multi-line comment.")
+			}
 		} else {
 			*tokens = append(*tokens, Token{Type: SLASH, Lexeme: string(char), Line: line})
 		}
@@ -208,6 +231,13 @@ func peek(source string, current int) byte {
 		return '\000'
 	}
 	return source[current]
+}
+
+func peekNext(source string, current int) byte {
+	if current+1 >= len(source) {
+		return '\000'
+	}
+	return source[current+1]
 }
 
 func reportError(line int, message string) {

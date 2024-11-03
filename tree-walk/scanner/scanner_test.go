@@ -36,6 +36,48 @@ func TestScanTokens(t *testing.T) {
     }
 }
 
+func TestScanTokensWithComments(t *testing.T) {
+	source := `// This file contains only comments.
+// It should run without error.
+// Also some blank lines.
+
+
+/*
+Multi-line comments are allowed.
+This is a multi-line comment.
+*/
+
+// Nested /* comments */ are allowed.
+
+// This is a single-line comment.
+
+/* This is a multi-line comment with a // single-line comment inside. */
+
+/* Nested multi-line comments are allowed.
+   /* Nested comments are allowed. */
+   This is still inside the nested comment.
+*/
+`
+
+	expectedTokens := []Token{
+		{Type: EOF, Lexeme: "", Line: 21}, // Adjust the line number based on the actual lines in your source.
+	}
+
+	actualTokens := ScanTokens(source)
+
+	if len(actualTokens) != len(expectedTokens) {
+		t.Fatalf("Expected %d tokens, but got %d", len(expectedTokens), len(actualTokens))
+	}
+
+	for i, expectedToken := range expectedTokens {
+		actualToken := actualTokens[i]
+		if !tokensEqual(expectedToken, actualToken) {
+			t.Errorf("Token %d mismatch.\nExpected: %v\nGot:      %v", i, expectedToken, actualToken)
+		}
+	}
+}
+
+
 func tokensEqual(a, b Token) bool {
     return a.Type == b.Type && a.Lexeme == b.Lexeme && a.Line == b.Line && reflect.DeepEqual(a.Literal, b.Literal)
 }
