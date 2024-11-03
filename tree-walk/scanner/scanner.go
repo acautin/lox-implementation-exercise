@@ -114,78 +114,82 @@ func ScanTokens(source string) []Token {
 	currentPos, line := 0, 1
 
 	for currentPos < len(source) {
-		var token Token
-		token, currentPos, line = scanToken(source, currentPos, line)
-		tokens = append(tokens, token)
+		currentPos, line = scanAndAppendToken(source, &tokens, currentPos, line)
 	}
 
 	tokens = append(tokens, Token{Type: EOF, Line: line})
 	return tokens
 }
 
-func scanToken(source string, currentPos int, line int) (Token, int, int) {
+func scanAndAppendToken(source string, tokens *[]Token, currentPos int, line int) (int, int) {
 	char := source[currentPos]
 	currentPos++
 
 	switch char {
 	case '(':
-		return Token{Type: LEFT_PAREN, Lexeme: string(char), Line: line}, currentPos, line
+		*tokens = append(*tokens, Token{Type: LEFT_PAREN, Lexeme: string(char), Line: line})
 	case ')':
-		return Token{Type: RIGHT_PAREN, Lexeme: string(char), Line: line}, currentPos, line
+		*tokens = append(*tokens, Token{Type: RIGHT_PAREN, Lexeme: string(char), Line: line})
 	case '{':
-		return Token{Type: LEFT_BRACE, Lexeme: string(char), Line: line}, currentPos, line
+		*tokens = append(*tokens, Token{Type: LEFT_BRACE, Lexeme: string(char), Line: line})
 	case '}':
-		return Token{Type: RIGHT_BRACE, Lexeme: string(char), Line: line}, currentPos, line
+		*tokens = append(*tokens, Token{Type: RIGHT_BRACE, Lexeme: string(char), Line: line})
 	case ',':
-		return Token{Type: COMMA, Lexeme: string(char), Line: line}, currentPos, line
+		*tokens = append(*tokens, Token{Type: COMMA, Lexeme: string(char), Line: line})
 	case '.':
-		return Token{Type: DOT, Lexeme: string(char), Line: line}, currentPos, line
+		*tokens = append(*tokens, Token{Type: DOT, Lexeme: string(char), Line: line})
 	case '-':
-		return Token{Type: MINUS, Lexeme: string(char), Line: line}, currentPos, line
+		*tokens = append(*tokens, Token{Type: MINUS, Lexeme: string(char), Line: line})
 	case '+':
-		return Token{Type: PLUS, Lexeme: string(char), Line: line}, currentPos, line
+		*tokens = append(*tokens, Token{Type: PLUS, Lexeme: string(char), Line: line})
 	case ';':
-		return Token{Type: SEMICOLON, Lexeme: string(char), Line: line}, currentPos, line
+		*tokens = append(*tokens, Token{Type: SEMICOLON, Lexeme: string(char), Line: line})
 	case '*':
-		return Token{Type: STAR, Lexeme: string(char), Line: line}, currentPos, line
+		*tokens = append(*tokens, Token{Type: STAR, Lexeme: string(char), Line: line})
 	case '!':
 		if match(source, &currentPos, '=') {
-			return Token{Type: BANG_EQUAL, Lexeme: "!=", Line: line}, currentPos, line
+			*tokens = append(*tokens, Token{Type: BANG_EQUAL, Lexeme: "!=", Line: line})
+		} else {
+			*tokens = append(*tokens, Token{Type: BANG, Lexeme: string(char), Line: line})
 		}
-		return Token{Type: BANG, Lexeme: string(char), Line: line}, currentPos, line
 	case '=':
 		if match(source, &currentPos, '=') {
-			return Token{Type: EQUAL_EQUAL, Lexeme: "==", Line: line}, currentPos, line
+			*tokens = append(*tokens, Token{Type: EQUAL_EQUAL, Lexeme: "==", Line: line})
+		} else {
+			*tokens = append(*tokens, Token{Type: EQUAL, Lexeme: string(char), Line: line})
 		}
-		return Token{Type: EQUAL, Lexeme: string(char), Line: line}, currentPos, line
 	case '<':
 		if match(source, &currentPos, '=') {
-			return Token{Type: LESS_EQUAL, Lexeme: "<=", Line: line}, currentPos, line
+			*tokens = append(*tokens, Token{Type: LESS_EQUAL, Lexeme: "<=", Line: line})
+		} else {
+			*tokens = append(*tokens, Token{Type: LESS, Lexeme: string(char), Line: line})
 		}
-		return Token{Type: LESS, Lexeme: string(char), Line: line}, currentPos, line
 	case '>':
 		if match(source, &currentPos, '=') {
-			return Token{Type: GREATER_EQUAL, Lexeme: ">=", Line: line}, currentPos, line
+			*tokens = append(*tokens, Token{Type: GREATER_EQUAL, Lexeme: ">=", Line: line})
+		} else {
+			*tokens = append(*tokens, Token{Type: GREATER, Lexeme: string(char), Line: line})
 		}
-		return Token{Type: GREATER, Lexeme: string(char), Line: line}, currentPos, line
 	case '/':
 		if match(source, &currentPos, '/') {
+			// A comment goes until the end of the line.
 			for peek(source, currentPos) != '\n' && currentPos < len(source) {
 				currentPos++
 			}
+			// Don't append a token for comments.
 		} else {
-			return Token{Type: SLASH, Lexeme: string(char), Line: line}, currentPos, line
+			*tokens = append(*tokens, Token{Type: SLASH, Lexeme: string(char), Line: line})
 		}
 	case ' ', '\r', '\t':
 		// Ignore whitespace.
 	case '\n':
 		line++
 	default:
-		reportError(line, "Unexpected character.")
+		reportError(line, fmt.Sprintf("Unexpected character: '%c'.", char))
 		panic("Unexpected character.")
 	}
 
-	return Token{Type: EOF, Line: line}, currentPos, line
+	return currentPos, line
 }
 
 func match(source string, current *int, expected byte) bool {
