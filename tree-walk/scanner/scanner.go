@@ -106,7 +106,7 @@ type Token struct {
 }
 
 func (t Token) String() string {
-	return fmt.Sprintf("{Type: %s, Lexeme: %s, Literal: %v, Line: %d}", TokenTypeNames[t.Type], t.Lexeme, t.Literal, t.Line)
+	return fmt.Sprintf("{Type: %s, Lexeme: %q, Literal: %v, Line: %d}", TokenTypeNames[t.Type], t.Lexeme, t.Literal, t.Line)
 }
 
 func ScanTokens(source string) []Token {
@@ -172,13 +172,12 @@ func scanAndAppendToken(source string, tokens *[]Token, currentPos int, line int
 		}
 	case '/':
 		if match(source, &currentPos, '/') {
-			// A comment goes until the end of the line.
+			// Single-line comment
 			for peek(source, currentPos) != '\n' && currentPos < len(source) {
 				currentPos++
 			}
-			// Don't append a token for comments.
 		} else if match(source, &currentPos, '*') {
-			// Multi-line comment: skip until closing */
+			// Multi-line comment
 			depth := 1
 			for depth > 0 && currentPos < len(source) {
 				if peek(source, currentPos) == '/' && peekNext(source, currentPos) == '*' {
@@ -203,6 +202,8 @@ func scanAndAppendToken(source string, tokens *[]Token, currentPos int, line int
 		} else {
 			*tokens = append(*tokens, Token{Type: SLASH, Lexeme: string(char), Line: line})
 		}
+	case '"':
+		return scanString(source, tokens, currentPos-1, line)
 	case ' ', '\r', '\t':
 		// Ignore whitespace.
 	case '\n':
@@ -211,6 +212,30 @@ func scanAndAppendToken(source string, tokens *[]Token, currentPos int, line int
 		reportError(line, fmt.Sprintf("Unexpected character: '%c'.", char))
 		panic("Unexpected character.")
 	}
+
+	return currentPos, line
+}
+
+func scanString(source string, tokens *[]Token, startPos int, line int) (int, int) {
+	currentPos := startPos + 1 // Move past the opening quote
+	for currentPos < len(source) && source[currentPos] != '"' {
+		if source[currentPos] == '\n' {
+			line++
+		}
+		currentPos++
+	}
+
+	if currentPos >= len(source) {
+		reportError(line, "Unterminated string literal.")
+		panic("Unterminated string literal.")
+	}
+
+	// Include the closing quote
+	currentPos++
+	lexeme := source[startPos:currentPos]
+	literal := lexeme[1 : len(lexeme)-1] // Exclude the surrounding quotes
+
+	*tokens = append(*tokens, Token{Type: STRING, Lexeme: lexeme, Literal: literal, Line: line})
 
 	return currentPos, line
 }

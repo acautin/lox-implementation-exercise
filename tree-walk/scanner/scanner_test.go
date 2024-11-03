@@ -78,6 +78,57 @@ This is a multi-line comment.
 }
 
 
+func TestScanTokensWithStringLiterals(t *testing.T) {
+    source := `"Hello, World!"
+"Another string with spaces and symbols! @#$$%^&*()"
+"String with backslash n and t: \n \t"`
+
+    expectedTokens := []Token{
+        {Type: STRING, Lexeme: `"Hello, World!"`, Literal: "Hello, World!", Line: 1},
+        {Type: STRING, Lexeme: `"Another string with spaces and symbols! @#$$%^&*()"`, Literal: "Another string with spaces and symbols! @#$$%^&*()", Line: 2},
+        {Type: STRING, Lexeme: `"String with backslash n and t: \n \t"`, Literal: `String with backslash n and t: \n \t`, Line: 3},
+        {Type: EOF, Lexeme: "", Line: 3},
+    }
+
+    actualTokens := ScanTokens(source)
+
+    if len(actualTokens) != len(expectedTokens) {
+        t.Fatalf("Expected %d tokens, but got %d", len(expectedTokens), len(actualTokens))
+    }
+
+    for i, expectedToken := range expectedTokens {
+        actualToken := actualTokens[i]
+        if !tokensEqual(expectedToken, actualToken) {
+            t.Errorf("Token %d mismatch.\nExpected: %v\nGot:      %v", i, expectedToken, actualToken)
+        }
+    }
+}
+
+func TestScanTokensWithBackslashes(t *testing.T) {
+    source := `"Path to the file: C:\\Program Files\\App"`
+
+    expectedTokens := []Token{
+        {Type: STRING, Lexeme: `"Path to the file: C:\\Program Files\\App"`, Literal: `Path to the file: C:\\Program Files\\App`, Line: 1},
+        {Type: EOF, Lexeme: "", Line: 1},
+    }
+
+    actualTokens := ScanTokens(source)
+
+    if len(actualTokens) != len(expectedTokens) {
+        t.Fatalf("Expected %d tokens, but got %d", len(expectedTokens), len(actualTokens))
+    }
+
+    for i, expectedToken := range expectedTokens {
+        actualToken := actualTokens[i]
+        if !tokensEqual(expectedToken, actualToken) {
+            t.Errorf("Token %d mismatch.\nExpected: %v\nGot:      %v", i, expectedToken, actualToken)
+        }
+    }
+}
+
 func tokensEqual(a, b Token) bool {
-    return a.Type == b.Type && a.Lexeme == b.Lexeme && a.Line == b.Line && reflect.DeepEqual(a.Literal, b.Literal)
+    return a.Type == b.Type &&
+        a.Lexeme == b.Lexeme &&
+        a.Line == b.Line &&
+        reflect.DeepEqual(a.Literal, b.Literal)
 }
