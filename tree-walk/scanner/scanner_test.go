@@ -126,6 +126,33 @@ func TestScanTokensWithBackslashes(t *testing.T) {
     }
 }
 
+func TestScanTokensWithNumbers(t *testing.T) {
+	source :=
+`12
+12.34
+// Invalid numbers such as .12 or 12. (should be handled as errors or as separate tokens)
+
+`
+	expectedTokens := []Token{
+		{Type: NUMBER, Lexeme: "12", Literal: 12.0, Line: 1},
+		{Type: NUMBER, Lexeme: "12.34", Literal: 12.34, Line: 2},
+		{Type: EOF, Lexeme: "", Line: 4},
+	}
+
+	actualTokens := ScanTokens(source)
+
+	if len(actualTokens) != len(expectedTokens) {
+		t.Fatalf("Expected %d tokens, but got %d", len(expectedTokens), len(actualTokens))
+	}
+
+	for i, expectedToken := range expectedTokens {
+		actualToken := actualTokens[i]
+		if !tokensEqual(expectedToken, actualToken) {
+			t.Errorf("Token %d mismatch.\nExpected: %v\nGot:      %v", i, expectedToken, actualToken)
+		}
+	}
+}
+
 func tokensEqual(a, b Token) bool {
     return a.Type == b.Type &&
         a.Lexeme == b.Lexeme &&

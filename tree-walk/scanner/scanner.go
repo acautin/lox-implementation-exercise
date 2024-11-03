@@ -2,6 +2,7 @@ package scanner
 
 import (
 	"fmt"
+	"strconv"
 )
 
 type TokenType int
@@ -123,54 +124,68 @@ func ScanTokens(source string) []Token {
 
 func scanAndAppendToken(source string, tokens *[]Token, currentPos int, line int) (int, int) {
 	char := source[currentPos]
-	currentPos++
 
 	switch char {
 	case '(':
 		*tokens = append(*tokens, Token{Type: LEFT_PAREN, Lexeme: string(char), Line: line})
+		currentPos++
 	case ')':
 		*tokens = append(*tokens, Token{Type: RIGHT_PAREN, Lexeme: string(char), Line: line})
+		currentPos++
 	case '{':
 		*tokens = append(*tokens, Token{Type: LEFT_BRACE, Lexeme: string(char), Line: line})
+		currentPos++
 	case '}':
 		*tokens = append(*tokens, Token{Type: RIGHT_BRACE, Lexeme: string(char), Line: line})
+		currentPos++
 	case ',':
 		*tokens = append(*tokens, Token{Type: COMMA, Lexeme: string(char), Line: line})
+		currentPos++
 	case '.':
 		*tokens = append(*tokens, Token{Type: DOT, Lexeme: string(char), Line: line})
+		currentPos++
 	case '-':
 		*tokens = append(*tokens, Token{Type: MINUS, Lexeme: string(char), Line: line})
+		currentPos++
 	case '+':
 		*tokens = append(*tokens, Token{Type: PLUS, Lexeme: string(char), Line: line})
+		currentPos++
 	case ';':
 		*tokens = append(*tokens, Token{Type: SEMICOLON, Lexeme: string(char), Line: line})
+		currentPos++
 	case '*':
 		*tokens = append(*tokens, Token{Type: STAR, Lexeme: string(char), Line: line})
+		currentPos++
 	case '!':
+		currentPos++
 		if match(source, &currentPos, '=') {
 			*tokens = append(*tokens, Token{Type: BANG_EQUAL, Lexeme: "!=", Line: line})
 		} else {
-			*tokens = append(*tokens, Token{Type: BANG, Lexeme: string(char), Line: line})
+			*tokens = append(*tokens, Token{Type: BANG, Lexeme: "!", Line: line})
 		}
 	case '=':
+		currentPos++
 		if match(source, &currentPos, '=') {
 			*tokens = append(*tokens, Token{Type: EQUAL_EQUAL, Lexeme: "==", Line: line})
 		} else {
-			*tokens = append(*tokens, Token{Type: EQUAL, Lexeme: string(char), Line: line})
+			*tokens = append(*tokens, Token{Type: EQUAL, Lexeme: "=", Line: line})
 		}
 	case '<':
+		currentPos++
 		if match(source, &currentPos, '=') {
 			*tokens = append(*tokens, Token{Type: LESS_EQUAL, Lexeme: "<=", Line: line})
 		} else {
-			*tokens = append(*tokens, Token{Type: LESS, Lexeme: string(char), Line: line})
+			*tokens = append(*tokens, Token{Type: LESS, Lexeme: "<", Line: line})
 		}
 	case '>':
+		currentPos++
 		if match(source, &currentPos, '=') {
 			*tokens = append(*tokens, Token{Type: GREATER_EQUAL, Lexeme: ">=", Line: line})
 		} else {
-			*tokens = append(*tokens, Token{Type: GREATER, Lexeme: string(char), Line: line})
+			*tokens = append(*tokens, Token{Type: GREATER, Lexeme: ">", Line: line})
 		}
 	case '/':
+		currentPos++
 		if match(source, &currentPos, '/') {
 			// Single-line comment
 			for peek(source, currentPos) != '\n' && currentPos < len(source) {
@@ -200,20 +215,64 @@ func scanAndAppendToken(source string, tokens *[]Token, currentPos int, line int
 				panic("Unterminated multi-line comment.")
 			}
 		} else {
-			*tokens = append(*tokens, Token{Type: SLASH, Lexeme: string(char), Line: line})
+			*tokens = append(*tokens, Token{Type: SLASH, Lexeme: "/", Line: line})
 		}
-	case '"':
-		return scanString(source, tokens, currentPos-1, line)
 	case ' ', '\r', '\t':
 		// Ignore whitespace.
+		currentPos++
 	case '\n':
 		line++
+		currentPos++
+	case '"':
+		return scanString(source, tokens, currentPos, line)
 	default:
-		reportError(line, fmt.Sprintf("Unexpected character: '%c'.", char))
-		panic("Unexpected character.")
+		if isDigit(char) {
+			return scanNumber(source, tokens, currentPos, line)
+		} else {
+			reportError(line, fmt.Sprintf("Unexpected character: '%c'.", char))
+			panic("Unexpected character.")
+		}
 	}
 
 	return currentPos, line
+}
+
+func scanNumber(source string, tokens *[]Token, startPos int, line int) (int, int) {
+	currentPos := startPos
+
+	// Integer part
+	for currentPos < len(source) && isDigit(source[currentPos]) {
+		currentPos++
+	}
+
+	// Fractional part
+	if currentPos < len(source) && source[currentPos] == '.' {
+		if currentPos+1 < len(source) && isDigit(source[currentPos+1]) {
+			currentPos++ // Consume '.'
+			for currentPos < len(source) && isDigit(source[currentPos]) {
+				currentPos++
+			}
+		} else {
+			// No digits after '.', invalid number
+			reportError(line, "Invalid number format: No digits after '.'.")
+			panic("Invalid number format.")
+		}
+	}
+
+	lexeme := source[startPos:currentPos]
+	literalValue, err := strconv.ParseFloat(lexeme, 64)
+	if err != nil {
+		reportError(line, fmt.Sprintf("Invalid number literal: %s", lexeme))
+		panic("Invalid number literal.")
+	}
+
+	*tokens = append(*tokens, Token{Type: NUMBER, Lexeme: lexeme, Literal: literalValue, Line: line})
+
+	return currentPos, line
+}
+
+func isDigit(c byte) bool {
+	return c >= '0' && c <= '9'
 }
 
 func scanString(source string, tokens *[]Token, startPos int, line int) (int, int) {
