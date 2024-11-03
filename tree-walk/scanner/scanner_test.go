@@ -131,12 +131,93 @@ func TestScanTokensWithNumbers(t *testing.T) {
 `12
 12.34
 // Invalid numbers such as .12 or 12. (should be handled as errors or as separate tokens)
-
 `
 	expectedTokens := []Token{
 		{Type: NUMBER, Lexeme: "12", Literal: 12.0, Line: 1},
 		{Type: NUMBER, Lexeme: "12.34", Literal: 12.34, Line: 2},
 		{Type: EOF, Lexeme: "", Line: 4},
+	}
+
+	actualTokens := ScanTokens(source)
+
+	if len(actualTokens) != len(expectedTokens) {
+		t.Fatalf("Expected %d tokens, but got %d", len(expectedTokens), len(actualTokens))
+	}
+
+	for i, expectedToken := range expectedTokens {
+		actualToken := actualTokens[i]
+		if !tokensEqual(expectedToken, actualToken) {
+			t.Errorf("Token %d mismatch.\nExpected: %v\nGot:      %v", i, expectedToken, actualToken)
+		}
+	}
+}
+
+func TestScanTokensWithIdentifiersAndKeywords(t *testing.T) {
+	source :=
+`var x = 10;
+print x + y;
+if (x > 5) {
+    print "x is greater than 5";
+} else {
+    print "x is less than or equal to 5";
+}
+fun add(a, b) {
+    return a + b;
+}`
+
+	expectedTokens := []Token{
+		{Type: VAR, Lexeme: "var", Line: 1},
+		{Type: IDENTIFIER, Lexeme: "x", Line: 1},
+		{Type: EQUAL, Lexeme: "=", Line: 1},
+		{Type: NUMBER, Lexeme: "10", Literal: 10.0, Line: 1},
+		{Type: SEMICOLON, Lexeme: ";", Line: 1},
+
+		{Type: PRINT, Lexeme: "print", Line: 2},
+		{Type: IDENTIFIER, Lexeme: "x", Line: 2},
+		{Type: PLUS, Lexeme: "+", Line: 2},
+		{Type: IDENTIFIER, Lexeme: "y", Line: 2},
+		{Type: SEMICOLON, Lexeme: ";", Line: 2},
+
+		{Type: IF, Lexeme: "if", Line: 3},
+		{Type: LEFT_PAREN, Lexeme: "(", Line: 3},
+		{Type: IDENTIFIER, Lexeme: "x", Line: 3},
+		{Type: GREATER, Lexeme: ">", Line: 3},
+		{Type: NUMBER, Lexeme: "5", Literal: 5.0, Line: 3},
+		{Type: RIGHT_PAREN, Lexeme: ")", Line: 3},
+		{Type: LEFT_BRACE, Lexeme: "{", Line: 3},
+
+		{Type: PRINT, Lexeme: "print", Line: 4},
+		{Type: STRING, Lexeme: `"x is greater than 5"`, Literal: "x is greater than 5", Line: 4},
+		{Type: SEMICOLON, Lexeme: ";", Line: 4},
+
+		{Type: RIGHT_BRACE, Lexeme: "}", Line: 5},
+		{Type: ELSE, Lexeme: "else", Line: 5},
+		{Type: LEFT_BRACE, Lexeme: "{", Line: 5},
+
+		{Type: PRINT, Lexeme: "print", Line: 6},
+		{Type: STRING, Lexeme: `"x is less than or equal to 5"`, Literal: "x is less than or equal to 5", Line: 6},
+		{Type: SEMICOLON, Lexeme: ";", Line: 6},
+
+		{Type: RIGHT_BRACE, Lexeme: "}", Line: 7},
+
+		{Type: FUN, Lexeme: "fun", Line: 8},
+		{Type: IDENTIFIER, Lexeme: "add", Line: 8},
+		{Type: LEFT_PAREN, Lexeme: "(", Line: 8},
+		{Type: IDENTIFIER, Lexeme: "a", Line: 8},
+		{Type: COMMA, Lexeme: ",", Line: 8},
+		{Type: IDENTIFIER, Lexeme: "b", Line: 8},
+		{Type: RIGHT_PAREN, Lexeme: ")", Line: 8},
+		{Type: LEFT_BRACE, Lexeme: "{", Line: 8},
+
+		{Type: RETURN, Lexeme: "return", Line: 9},
+		{Type: IDENTIFIER, Lexeme: "a", Line: 9},
+		{Type: PLUS, Lexeme: "+", Line: 9},
+		{Type: IDENTIFIER, Lexeme: "b", Line: 9},
+		{Type: SEMICOLON, Lexeme: ";", Line: 9},
+
+		{Type: RIGHT_BRACE, Lexeme: "}", Line: 10},
+
+		{Type: EOF, Lexeme: "", Line: 10},
 	}
 
 	actualTokens := ScanTokens(source)

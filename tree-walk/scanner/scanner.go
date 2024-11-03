@@ -99,6 +99,26 @@ var TokenTypeNames = map[TokenType]string{
 	EOF:           "EOF",
 }
 
+// Map of reserved words to their token types.
+var keywords = map[string]TokenType{
+	"and":    AND,
+	"class":  CLASS,
+	"else":   ELSE,
+	"false":  FALSE,
+	"for":    FOR,
+	"fun":    FUN,
+	"if":     IF,
+	"nil":    NIL,
+	"or":     OR,
+	"print":  PRINT,
+	"return": RETURN,
+	"super":  SUPER,
+	"this":   THIS,
+	"true":   TRUE,
+	"var":    VAR,
+	"while":  WHILE,
+}
+
 type Token struct {
 	Type    TokenType
 	Lexeme  string
@@ -228,11 +248,30 @@ func scanAndAppendToken(source string, tokens *[]Token, currentPos int, line int
 	default:
 		if isDigit(char) {
 			return scanNumber(source, tokens, currentPos, line)
+		} else if isAlpha(char) {
+			return scanIdentifier(source, tokens, currentPos, line)
 		} else {
 			reportError(line, fmt.Sprintf("Unexpected character: '%c'.", char))
 			panic("Unexpected character.")
 		}
 	}
+
+	return currentPos, line
+}
+
+func scanIdentifier(source string, tokens *[]Token, startPos int, line int) (int, int) {
+	currentPos := startPos
+	for currentPos < len(source) && isAlphaNumeric(source[currentPos]) {
+		currentPos++
+	}
+
+	lexeme := source[startPos:currentPos]
+	tokenType, ok := keywords[lexeme]
+	if !ok {
+		tokenType = IDENTIFIER
+	}
+
+	*tokens = append(*tokens, Token{Type: tokenType, Lexeme: lexeme, Line: line})
 
 	return currentPos, line
 }
@@ -269,10 +308,6 @@ func scanNumber(source string, tokens *[]Token, startPos int, line int) (int, in
 	*tokens = append(*tokens, Token{Type: NUMBER, Lexeme: lexeme, Literal: literalValue, Line: line})
 
 	return currentPos, line
-}
-
-func isDigit(c byte) bool {
-	return c >= '0' && c <= '9'
 }
 
 func scanString(source string, tokens *[]Token, startPos int, line int) (int, int) {
@@ -326,4 +361,18 @@ func peekNext(source string, current int) byte {
 
 func reportError(line int, message string) {
 	fmt.Printf("[line %d] Error: %s\n", line, message)
+}
+
+func isAlpha(c byte) bool {
+	return (c >= 'a' && c <= 'z') ||
+		(c >= 'A' && c <= 'Z') ||
+		c == '_'
+}
+
+func isDigit(c byte) bool {
+	return c >= '0' && c <= '9'
+}
+
+func isAlphaNumeric(c byte) bool {
+	return isAlpha(c) || isDigit(c)
 }
