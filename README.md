@@ -32,6 +32,16 @@ The project currently supports **expressions** and basic evaluation:
 
 - [Go](https://go.dev/doc/install) 1.18 or higher.
 
+### Building
+
+To compile the interpreter into an executable from the root directory:
+
+```bash
+go build -C tree-walk -o ../golox .
+```
+
+The `-o` flag allows you to specify the name and path of the output binary (in this case, `golox`). 
+
 ### Running the Interpreter
 
 From the root directory:
